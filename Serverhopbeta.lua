@@ -1,69 +1,22 @@
-local Config = {
-	MaxStore = 3600,
-	CheckInterval = 2500,
-	TeleportInterval = 1000,
-}
-
-local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
 
-if not Player then
-	Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-	Player = Players.LocalPlayer
+local Servers = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+local Server, Next = nil, nil
+local function ListServers(cursor)
+    local Raw = game:HttpGet(Servers .. ((cursor and "&cursor=" .. cursor) or ""))
+    return HttpService:JSONDecode(Raw)
 end
 
-getgenv().ServerHop = function()
-	local PlaceId = game.PlaceId
-	local JobId = game.JobId
+repeat
+    local Servers = ListServers(Next)
+    Server = Servers.data[math.random(1, (#Servers.data / 3))]
+    Next = Servers.nextPageCursor
+until Server
 
-	local RootFolder = "ServerHop"
-	local StorageFile = `{RootFolder}/{tostring(PlaceId)}.json`
-	local Data = {
-		Start = tick(),
-		Jobs = {},
-	}
-
-	if not isfolder(RootFolder) then
-		makefolder(RootFolder)
-	end
-
-	if isfile(StorageFile) then
-		local NewData = HttpService:JSONDecode(readfile(StorageFile))
-
-		if tick() - NewData.Start < Config.MaxStore then
-			Data = NewData
-		end
-	end
-
-	if not table.find(Data.Jobs, JobId) then
-		table.insert(Data.Jobs, JobId)
-	end
-
-	writefile(StorageFile, HttpService:JSONEncode(Data))
-
-	local Servers = {}
-	local Cursor = ""
-
-	while Cursor and #Servers <= 0 and task.wait(Config.CheckInterval / 1000) do
-		local Request = request or HttpService.RequestAsync
-		local RequestSuccess, Response = pcall(Request, {
-			Url = `https://games.roblox.com/v1/games/{PlaceId}/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true&cursor{Cursor}`,
-			Method = "GET",
-		})
-
-		if not RequestSuccess then
-			continue
-		end
-
-		local DecodeSuccess, Body = pcall(HttpService.JSONDecode, HttpService, Response.Body)
-
-		if not DecodeSuccess or not Body or not Body.data then
-			continue
-		end
-
-		task.spawn(function()
+if Server.playing < Server.maxPlayers and Server.id ~= game.JobId then
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, Server.id, game.Players.LocalPlayer)
+end
 			for _, Server in pairs(Body.data) do
 				if
 					typeof(Server) ~= "table"
