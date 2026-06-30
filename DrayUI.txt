@@ -1259,30 +1259,6 @@ DRR["93"] = Instance.new("ModuleScript", DRR["1"]);
 DRR["93"]["Name"] = [[Library]];
 
 -- Require DRR wrapper
-local function patchScrollingFrame(frame)
-    if not frame:IsA("ScrollingFrame") then return end
-    local layout = frame:FindFirstChildOfClass("UIListLayout") or frame:FindFirstChildOfClass("UIGridLayout")
-    if not layout then return end
-
-    frame.AutomaticCanvasSize = Enum.AutomaticSize.None
-    
-    local function updateCanvas()
-        local dir = frame.ScrollingDirection
-        local x = (dir == Enum.ScrollingDirection.X or dir == Enum.ScrollingDirection.XY) and layout.AbsoluteContentSize.X or 0
-        local y = (dir == Enum.ScrollingDirection.Y or dir == Enum.ScrollingDirection.XY) and layout.AbsoluteContentSize.Y or 0
-        frame.CanvasSize = UDim2.new(0, x, 0, y)
-    end
-    
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
-    updateCanvas()
-end
-
-DRR["1"].DescendantAdded:Connect(patchScrollingFrame)
-DRR["30"].DescendantAdded:Connect(patchScrollingFrame)
-
-for _, desc in ipairs(DRR["1"]:GetDescendants()) do patchScrollingFrame(desc) end
-for _, desc in ipairs(DRR["30"]:GetDescendants()) do patchScrollingFrame(desc) end
-
 local DRR_REQUIRE = require;
 local DRR_MODULES = {};
 local function require(Module:ModuleScript)
